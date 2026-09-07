@@ -1,0 +1,102 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and account information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "phone": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "admin"] },
+        "balance": { "type": "number" },
+        "totalEarned": { "type": "number" },
+        "tasksCompleted": { "type": "number" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["uid", "phone", "role", "balance", "totalEarned", "tasksCompleted", "createdAt"]
+    },
+    "Setting": {
+      "title": "Setting",
+      "description": "Global application settings",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "themeColor": { "type": "string" },
+        "minDeposit": { "type": "number" },
+        "taskReward": { "type": "number" },
+        "minWithdrawal": { "type": "number" },
+        "telegramLink": { "type": "string" },
+        "depositMethods": { "type": "array" },
+        "withdrawMethods": { "type": "array" },
+        "logoUrl": { "type": "string" }
+      },
+      "required": ["name", "themeColor", "minDeposit", "taskReward", "minWithdrawal", "telegramLink", "depositMethods", "withdrawMethods"]
+    },
+    "Task": {
+      "title": "Task",
+      "description": "A task for users to complete",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "link": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["title", "description", "link", "status", "createdAt"]
+    },
+    "Submission": {
+      "title": "Submission",
+      "description": "A user's submission for a task",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userPhone": { "type": "string" },
+        "taskId": { "type": "string" },
+        "taskTitle": { "type": "string" },
+        "screenshotUrl": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "timestamp": { "type": "number" }
+      },
+      "required": ["userId", "userPhone", "taskId", "taskTitle", "screenshotUrl", "status", "timestamp"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "A deposit or withdrawal transaction",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userPhone": { "type": "string" },
+        "type": { "type": "string", "enum": ["deposit", "withdrawal"] },
+        "amount": { "type": "number" },
+        "method": { "type": "string" },
+        "accountDetails": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "timestamp": { "type": "number" }
+      },
+      "required": ["userId", "userPhone", "type", "amount", "method", "status", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "Stores user profiles."
+    },
+    "/settings/{docId}": {
+      "schema": { "$ref": "#/entities/Setting" },
+      "description": "Stores global app settings."
+    },
+    "/tasks/{taskId}": {
+      "schema": { "$ref": "#/entities/Task" },
+      "description": "Stores available tasks."
+    },
+    "/submissions/{submissionId}": {
+      "schema": { "$ref": "#/entities/Submission" },
+      "description": "Stores task submissions by users."
+    },
+    "/transactions/{transactionId}": {
+      "schema": { "$ref": "#/entities/Transaction" },
+      "description": "Stores user deposit and withdrawal requests."
+    }
+  }
+}

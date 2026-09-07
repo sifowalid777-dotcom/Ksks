@@ -1,0 +1,6 @@
+{
+  "name": "إنجاز المهام والربح",
+  "description": "منصة تتيح للمستخدمين كسب المال من خلال إكمال مهام بسيطة.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

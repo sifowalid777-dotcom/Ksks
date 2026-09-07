@@ -1,0 +1,104 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helpers
+    function isSignedIn() { return request.auth != null; }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function isAdmin() { 
+      return isSignedIn() && 
+      (request.auth.token.email == 'sifowalid777@gmail.com' || 
+       exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'); 
+    }
+
+    // Validations
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'phone', 'role', 'balance', 'totalEarned', 'tasksCompleted', 'createdAt']) &&
+             data.uid is string && data.uid.size() <= 128 && data.uid == request.auth.uid &&
+             data.phone is string && data.phone.size() <= 20 &&
+             data.role in ['user', 'admin'] &&
+             data.balance is number && data.balance >= 0 &&
+             data.totalEarned is number && data.totalEarned >= 0 &&
+             data.tasksCompleted is number && data.tasksCompleted >= 0 &&
+             data.createdAt is number;
+    }
+
+    match /users/{userId} {
+      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow create: if isSignedIn() && isValidId(userId) && userId == request.auth.uid &&
+                    isValidUser(incoming()) && incoming().createdAt == request.time.toMillis();
+      allow update: if isSignedIn() && isValidId(userId) && (
+        isAdmin() || 
+        (request.auth.uid == userId && 
+         incoming().diff(existing()).affectedKeys().hasOnly(['phone', 'updatedAt']) &&
+         incoming().updatedAt == request.time.toMillis())
+      );
+    }
+
+    function isValidSetting(data) {
+      return data.keys().hasAll(['name', 'themeColor', 'minDeposit', 'taskReward', 'minWithdrawal', 'telegramLink', 'depositMethods', 'withdrawMethods']) &&
+             data.name is string && data.name.size() <= 100 &&
+             data.themeColor is string && data.themeColor.size() <= 20 &&
+             data.minDeposit is number && data.minDeposit >= 0 &&
+             data.taskReward is number && data.taskReward >= 0 &&
+             data.minWithdrawal is number && data.minWithdrawal >= 0 &&
+             data.telegramLink is string && data.telegramLink.size() <= 200 &&
+             data.depositMethods is list && data.depositMethods.size() <= 20 &&
+             data.withdrawMethods is list && data.withdrawMethods.size() <= 20;
+    }
+
+    match /settings/{docId} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidId(docId);
+    }
+
+    match /tasks/{taskId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin() && isValidId(taskId);
+    }
+
+    function isValidSubmission(data) {
+      return data.keys().hasAll(['userId', 'userPhone', 'taskId', 'taskTitle', 'screenshotUrl', 'status', 'timestamp']) &&
+             data.userId is string && data.userId == request.auth.uid &&
+             data.userPhone is string && data.userPhone.size() <= 20 &&
+             data.taskId is string && data.taskId.size() <= 128 &&
+             data.taskTitle is string && data.taskTitle.size() <= 200 &&
+             data.screenshotUrl is string && data.screenshotUrl.size() <= 1000 &&
+             data.status in ['pending', 'approved', 'rejected'] &&
+             data.timestamp is number;
+    }
+
+    match /submissions/{submissionId} {
+      allow read: if isSignedIn() && (isAdmin() || resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn() && isValidId(submissionId) && 
+                    isValidSubmission(incoming()) && incoming().status == 'pending' &&
+                    exists(/databases/$(database)/documents/tasks/$(incoming().taskId));
+      allow update, delete: if isAdmin() && isValidId(submissionId);
+    }
+
+    function isValidTransaction(data) {
+      return data.keys().hasAll(['userId', 'userPhone', 'type', 'amount', 'method', 'status', 'timestamp']) &&
+             data.userId is string && data.userId == request.auth.uid &&
+             data.userPhone is string && data.userPhone.size() <= 20 &&
+             data.type in ['deposit', 'withdrawal'] &&
+             data.amount is number && data.amount > 0 &&
+             data.method is string && data.method.size() <= 100 &&
+             data.status in ['pending', 'approved', 'rejected'] &&
+             data.timestamp is number;
+    }
+
+    match /transactions/{transactionId} {
+      allow read: if isSignedIn() && (isAdmin() || resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn() && isValidId(transactionId) && 
+                    isValidTransaction(incoming()) && incoming().status == 'pending';
+      allow update: if isAdmin() && isValidId(transactionId);
+    }
+  }
+}
